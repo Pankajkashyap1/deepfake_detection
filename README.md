@@ -2,9 +2,9 @@
 
 # Multimodal Face Forgery Detection with Weak Localization and Evidence-Guided Explanations
 
-**Authors:** Shivani (`P25DS002`)   
+**Authors:** Pankaj Kashyap(P25CS501), Anjali Patel (P26DS001)  
 **Program:** Ph.D.  
-**Course:** AML 
+**Course:** ML 
 
 A multimodal deepfake face detection framework that combines **RGB semantic features**, **wavelet frequency cues**, and **SRM-based noise residuals** for **real/fake classification**, **weak localization**, and **evidence-guided explanations**.
 
