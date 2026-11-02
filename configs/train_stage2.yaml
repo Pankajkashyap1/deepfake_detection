@@ -1,0 +1,44 @@
+stage: 2
+seed: 42
+use_wandb: false
+
+data:
+  annotation_path: "/data/datasets/deepfake_datasets/DQ_FF++/train_set"
+  image_root: "/data/datasets/deepfake_datasets/FF_faces_by_type"
+  max_samples: 1000
+  use_first_answer_only: true
+
+model:
+  clip_model: "openai/clip-vit-base-patch16"
+  llm_model: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+  embed_dim: 768
+  num_patches: 196
+  seq_len: 393
+  num_reasoning_layers: 3
+  heatmap_mode: "fused"
+  gradcam_weight: 0.7
+  use_llm: true
+  use_wavelet: true
+  use_srm: true
+
+fusion:
+  gate_dim: 256
+
+prompts:
+  real_prompt: "authentic human face"
+  fake_prompt: "manipulated synthetic face"
+
+training:
+  stage2:
+    detector_ckpt: "/data1/pankaj/dlcv/Deepfake-Detector/runs/ff_stage1_full/checkpoints/stage1_best.pth"
+    lr: 1e-5
+    weight_decay: 1e-2
+    epochs: 5
+    batch_size: 2
+    grad_accum_steps: 1
+    num_workers: 4
+    max_grad_norm: 1.0
+    early_stopping_patience: 3
+
+losses:
+  lambda_exp: 1.0

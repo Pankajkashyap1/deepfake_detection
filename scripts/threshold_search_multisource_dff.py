@@ -1,0 +1,293 @@
+import os
+import sys
+import json
+import csv
+import argparse
+from typing import Dict, List
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+from omegaconf import OmegaConf
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+    confusion_matrix,
+)
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from datasets.ffpp_dataset import FFPPDataset
+from datasets.celebdf_dataset import CelebDFDataset
+from datasets.deepfakeface_dataset import DeepFakeFaceDataset
+from datasets.combined_dataset import CombinedDataset
+from datasets.transforms import get_transforms
+from models.deepfake_detector import DeepfakeVLMDetector
+
+
+def build_model_config(cfg):
+    return OmegaConf.create({
+        **OmegaConf.to_container(cfg.model, resolve=True),
+        **OmegaConf.to_container(cfg.fusion, resolve=True),
+    })
+
+
+def load_model(ckpt_path: str, config_path: str, device: str):
+    cfg = OmegaConf.load(config_path)
+    model_cfg = build_model_config(cfg)
+
+    model = DeepfakeVLMDetector(model_cfg)
+    checkpoint = torch.load(ckpt_path, map_location="cpu")
+    state_dict = checkpoint["model"] if "model" in checkpoint else checkpoint
+
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    print("Missing keys count   :", len(missing))
+    print("Unexpected keys count:", len(unexpected))
+    if len(missing) > 0:
+        print("First 10 missing keys   :", missing[:10])
+    if len(unexpected) > 0:
+        print("First 10 unexpected keys:", unexpected[:10])
+
+    model.set_stage(1)
+    model.to(device)
+    model.eval()
+    return model, cfg
+
+
+def build_dataset(cfg, split: str):
+    if split not in ["train", "val", "test"]:
+        raise ValueError("split must be one of train/val/test")
+
+    ffpp_ds = FFPPDataset(
+        root=cfg.data.ffpp_root,
+        split=split,
+        transform=get_transforms(train=False),
+        train_ratio=cfg.data.get("ffpp_train_ratio", 0.7),
+        val_ratio=cfg.data.get("ffpp_val_ratio", 0.15),
+        test_ratio=cfg.data.get("ffpp_test_ratio", 0.15),
+        seed=cfg.get("seed", 42),
+        max_frames_per_video=cfg.data.get("max_frames_per_video", None),
+        balance=False,
+    )
+
+    celebdf_ds = CelebDFDataset(
+        root=cfg.data.celebdf_root,
+        split=split,
+        transform=get_transforms(train=False),
+        train_ratio=cfg.data.get("celebdf_train_ratio", 0.85),
+        seed=cfg.get("seed", 42),
+        max_frames_per_video=cfg.data.get("max_frames_per_video", None),
+    )
+
+    dff_ds = DeepFakeFaceDataset(
+        root=cfg.data.dff_root,
+        split=split,
+        transform=get_transforms(train=False),
+        real_dir=cfg.data.get("dff_real_dir", "wiki"),
+        fake_dirs=cfg.data.get("dff_fake_dirs", None),
+        train_ratio=cfg.data.get("dff_train_ratio", 0.8),
+        val_ratio=cfg.data.get("dff_val_ratio", 0.1),
+        seed=cfg.get("seed", 42),
+        max_images_per_group=cfg.data.get("dff_max_images_per_group", None),
+    )
+
+    combined = CombinedDataset(
+        {
+            "ffpp": ffpp_ds,
+            "celebdf": celebdf_ds,
+            "dff": dff_ds,
+        },
+        balance_sources=False,
+        seed=cfg.get("seed", 42),
+    )
+    return combined
+
+
+def compute_eer(labels: np.ndarray, probs: np.ndarray) -> float:
+    if len(np.unique(labels)) < 2:
+        return 0.0
+    fpr, tpr, _ = roc_curve(labels, probs)
+    fnr = 1.0 - tpr
+    idx = np.nanargmin(np.abs(fnr - fpr))
+    return float((fpr[idx] + fnr[idx]) / 2.0)
+
+
+def evaluate_at_threshold(labels: np.ndarray, probs: np.ndarray, threshold: float) -> Dict:
+    preds = (probs >= threshold).astype(np.int64)
+
+    acc = accuracy_score(labels, preds)
+    f1 = f1_score(labels, preds, zero_division=0)
+    prec = precision_score(labels, preds, zero_division=0)
+    rec = recall_score(labels, preds, zero_division=0)
+
+    tn, fp, fn, tp = confusion_matrix(labels, preds, labels=[0, 1]).ravel()
+
+    return {
+        "threshold": float(threshold),
+        "accuracy": float(acc),
+        "f1": float(f1),
+        "precision": float(prec),
+        "recall": float(rec),
+        "tn": int(tn),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tp": int(tp),
+    }
+
+
+def collect_probs(model, loader, device: str):
+    all_probs: List[np.ndarray] = []
+    all_labels: List[np.ndarray] = []
+    all_paths: List[str] = []
+    all_sources: List[str] = []
+
+    with torch.no_grad():
+        for batch in loader:
+            images = batch["image"].to(device)
+            labels = batch["label"]
+
+            outputs = model(images)
+            logits = outputs["logits"]
+            probs = torch.softmax(logits, dim=1)[:, 1]
+
+            all_probs.append(probs.detach().cpu().numpy())
+            all_labels.append(labels.detach().cpu().numpy())
+            all_paths.extend(list(batch["path"]))
+            if "source" in batch:
+                all_sources.extend(list(batch["source"]))
+            else:
+                all_sources.extend(["unknown"] * len(batch["path"]))
+
+    if len(all_probs) == 0:
+        raise RuntimeError("No samples were loaded for threshold search.")
+
+    probs = np.concatenate(all_probs, axis=0)
+    labels = np.concatenate(all_labels, axis=0)
+    return probs, labels, all_paths, all_sources
+
+
+def save_threshold_table(results: List[Dict], out_csv: str):
+    fieldnames = list(results[0].keys())
+    with open(out_csv, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Threshold search for multi-source FF++ + Celeb-DF + DeepFakeFace detector"
+    )
+    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--ckpt", type=str, required=True)
+    parser.add_argument("--split", type=str, default="val", choices=["val", "test"])
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--out_dir", type=str, default="results/threshold_search_multisource_dff")
+    parser.add_argument("--threshold", type=float, default=None)
+    parser.add_argument("--start", type=float, default=0.01)
+    parser.add_argument("--end", type=float, default=0.99)
+    parser.add_argument("--step", type=float, default=0.01)
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
+
+    model, cfg = load_model(args.ckpt, args.config, device)
+    dataset = build_dataset(cfg, args.split)
+
+    loader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=True,
+    )
+
+    probs, labels, paths, sources = collect_probs(model, loader, device)
+
+    auc = roc_auc_score(labels, probs) if len(np.unique(labels)) > 1 else 0.0
+    eer = compute_eer(labels, probs)
+
+    print(f"\nSplit: {args.split}")
+    print(f"Samples: {len(labels)}")
+    print(f"AUC (threshold-free): {auc:.4f}")
+    print(f"EER (threshold-free): {eer:.4f}")
+
+    source_counts = {}
+    for s in sources:
+        source_counts[s] = source_counts.get(s, 0) + 1
+    print("Source counts:", source_counts)
+
+    raw_path = os.path.join(args.out_dir, f"{args.split}_probs.json")
+    with open(raw_path, "w") as f:
+        json.dump(
+            {
+                "split": args.split,
+                "auc": float(auc),
+                "eer": float(eer),
+                "labels": labels.tolist(),
+                "probs": probs.tolist(),
+                "paths": paths,
+                "sources": sources,
+                "source_counts": source_counts,
+            },
+            f,
+            indent=2,
+        )
+    print(f"Saved raw probabilities to: {raw_path}")
+
+    if args.threshold is not None:
+        result = evaluate_at_threshold(labels, probs, args.threshold)
+        result["auc"] = float(auc)
+        result["eer"] = float(eer)
+
+        print("\nSingle-threshold evaluation")
+        print(json.dumps(result, indent=2))
+
+        out_json = os.path.join(args.out_dir, f"{args.split}_threshold_{args.threshold:.2f}.json")
+        with open(out_json, "w") as f:
+            json.dump(result, f, indent=2)
+        print(f"Saved summary to: {out_json}")
+        return
+
+    thresholds = np.arange(args.start, args.end + 1e-9, args.step)
+    results = [evaluate_at_threshold(labels, probs, float(t)) for t in thresholds]
+
+    best_acc = max(results, key=lambda x: x["accuracy"])
+    best_f1 = max(results, key=lambda x: x["f1"])
+
+    print("\nBest threshold by accuracy")
+    print(json.dumps(best_acc, indent=2))
+
+    print("\nBest threshold by F1")
+    print(json.dumps(best_f1, indent=2))
+
+    out_csv = os.path.join(args.out_dir, f"{args.split}_threshold_table.csv")
+    save_threshold_table(results, out_csv)
+    print(f"Saved threshold table to: {out_csv}")
+
+    summary = {
+        "split": args.split,
+        "auc": float(auc),
+        "eer": float(eer),
+        "source_counts": source_counts,
+        "best_by_accuracy": best_acc,
+        "best_by_f1": best_f1,
+    }
+    out_json = os.path.join(args.out_dir, f"{args.split}_threshold_summary.json")
+    with open(out_json, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"Saved summary to: {out_json}")
+
+
+if __name__ == "__main__":
+    main()

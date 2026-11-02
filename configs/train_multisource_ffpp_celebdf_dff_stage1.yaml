@@ -1,0 +1,60 @@
+stage: 1
+seed: 42
+use_wandb: false
+
+data:
+  type: "multisource_ffpp_celebdf_dff"
+
+  ffpp_root: "/data/datasets/deepfake_datasets/FF_fixed"
+  ffpp_train_ratio: 0.7
+  ffpp_val_ratio: 0.15
+  ffpp_test_ratio: 0.15
+
+  celebdf_root: "/data/datasets/deepfake_datasets/Celeb-DF-v2"
+  celebdf_train_ratio: 0.85
+
+  dff_root: "/data/datasets/deepfake_datasets/DeepFakeFace"
+  dff_real_dir: "wiki"
+  dff_fake_dirs: null
+  dff_train_ratio: 0.8
+  dff_val_ratio: 0.1
+  dff_max_images_per_group: 100
+
+  max_frames_per_video: 8
+  balance_sources: true
+
+model:
+  clip_model: "openai/clip-vit-base-patch16"
+  llm_model: "mistralai/Mistral-7B-Instruct-v0.3"
+  embed_dim: 768
+  num_patches: 196
+  seq_len: 393
+  num_reasoning_layers: 3
+  use_llm: false
+  use_wavelet: true
+  use_srm: true
+  use_bridge: true
+  use_reasoning: false
+
+fusion:
+  gate_dim: 256
+  dropout: 0.1
+
+training:
+  stage1:
+    lr: 5e-5
+    weight_decay: 1e-2
+    epochs: 50
+    batch_size: 16
+    grad_accum_steps: 2
+    num_workers: 4
+    max_grad_norm: 1.0
+    early_stopping_patience: 5
+    eval_threshold: 0.5
+
+losses:
+  lambda_cls: 1.0
+  lambda_contrast: 0.1
+  lambda_proto: 0.01
+  temperature: 0.07
+  label_smoothing: 0.0

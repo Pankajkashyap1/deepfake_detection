@@ -1,0 +1,33 @@
+Cross-Dataset Results
+
+FF++ -> Celeb-DF
+AUC: 0.7852
+EER: 0.2657
+
+FF++ -> DFDC
+AUC: 0.6349
+EER: 0.4114
+
+Celeb-DF -> Celeb-DF
+AUC: 1.0000
+EER: 0.0000
+
+Celeb-DF -> FF++
+AUC: 0.6392
+EER: 0.4036
+
+Celeb-DF -> DFDC
+AUC: 0.6367
+EER: 0.3954
+
+FF++ + Celeb-DF -> DFDC
+AUC: 0.6941
+EER: 0.3644
+
+FF++ + Celeb-DF + DFF -> DFDC
+AUC: 0.6945
+EER: 0.3654
+
+FF++ + Celeb-DF + DG-Aug -> DFDC
+AUC: 0.6609
+EER: 0.3943

@@ -1,0 +1,36 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+.DS_Store
+
+logs/
+wandb/
+outputs/
+tmp/
+temp/
+
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+.env
+.venv/
+venv/
+
+# training outputs (checkpoints are ~0.8-3 GB each)
+runs/
+checkpoints/
+configs_saved/
+results/threshold_search*/
+
+# LaTeX build files
+*.aux
+*.out
+report/replication/build.log
+report/replication/report.log
+
+# replication report assets (not published)
+report/replication/

@@ -1,0 +1,146 @@
+{
+  "ff_stage1_full": {
+    "best_epoch": 15,
+    "val_auc": 0.9503055454642916,
+    "threshold": 0.01,
+    "in_domain_test_acc_at_0.5": 0.8430055488339104,
+    "in_domain_test_acc_at_val_threshold": 0.8825983562101047,
+    "FF++": {
+      "frames": 23969,
+      "frame_auc": 0.9476176106821779,
+      "frame_eer": 0.12609141604500318,
+      "videos": 750,
+      "video_auc": 0.9673888888888889,
+      "video_eer": 0.09000000000000002
+    },
+    "Celeb-DF": {
+      "frames": 16576,
+      "frame_auc": 0.7876115414454932,
+      "frame_eer": 0.2865447372769333,
+      "videos": 518,
+      "video_auc": 0.8512888301387971,
+      "video_eer": 0.23709517514871115
+    },
+    "DFDC": {
+      "frames": 12192,
+      "frame_auc": 0.6281601149630608,
+      "frame_eer": 0.4111761216566005,
+      "videos": 381,
+      "video_auc": 0.6468075927523728,
+      "video_eer": 0.39572907679033653
+    },
+    "DeepFakeFace": {
+      "frames": 11848,
+      "frame_auc": 0.5699581980956775,
+      "frame_eer": 0.4524532973216295
+    }
+  },
+  "celebdf_stage1": {
+    "best_epoch": 14,
+    "val_auc": 0.9969978828028706,
+    "threshold": 0.89,
+    "in_domain_test_acc_at_0.5": 0.9481780888030888,
+    "in_domain_test_acc_at_val_threshold": 0.9558397683397684,
+    "FF++": {
+      "frames": 23969,
+      "frame_auc": 0.6952159302345801,
+      "frame_eer": 0.36625922713756587,
+      "videos": 750,
+      "video_auc": 0.701411111111111,
+      "video_eer": 0.365
+    },
+    "Celeb-DF": {
+      "frames": 16576,
+      "frame_auc": 0.9914568692426057,
+      "frame_eer": 0.045842799900859266,
+      "videos": 518,
+      "video_auc": 0.9988598810310642,
+      "video_eer": 0.025941837409120982
+    },
+    "DFDC": {
+      "frames": 12192,
+      "frame_auc": 0.5930469845367774,
+      "frame_eer": 0.44068162208800693,
+      "videos": 381,
+      "video_auc": 0.6468075927523727,
+      "video_eer": 0.40722605694564284
+    },
+    "DeepFakeFace": {
+      "frames": 11848,
+      "frame_auc": 0.5223112307245972,
+      "frame_eer": 0.4796871483232051
+    }
+  },
+  "multisource_ffpp_celebdf": {
+    "best_epoch": 10,
+    "val_auc": 0.9520616066831573,
+    "threshold": 0.05,
+    "in_domain_test_acc_at_0.5": 0.8529179810725552,
+    "in_domain_test_acc_at_val_threshold": 0.8710567823343849,
+    "FF++": {
+      "frames": 23969,
+      "frame_auc": 0.8864835639574312,
+      "frame_eer": 0.19687768988992638,
+      "videos": 750,
+      "video_auc": 0.9131111111111111,
+      "video_eer": 0.1808333333333333
+    },
+    "Celeb-DF": {
+      "frames": 16576,
+      "frame_auc": 0.9760577759676554,
+      "frame_eer": 0.0716142390945142,
+      "videos": 518,
+      "video_auc": 0.9934897554527429,
+      "video_eer": 0.03597157964309322
+    },
+    "DFDC": {
+      "frames": 12192,
+      "frame_auc": 0.70583314936772,
+      "frame_eer": 0.34046591889559963,
+      "videos": 381,
+      "video_auc": 0.7514236410698878,
+      "video_eer": 0.3103537532355479
+    },
+    "DeepFakeFace": {
+      "frames": 11848,
+      "frame_auc": 0.5368120546503745,
+      "frame_eer": 0.48036236776952507
+    }
+  },
+  "multisource_ffpp_celebdf_dff": {
+    "best_epoch": 8,
+    "val_auc": 0.9570558366160258,
+    "threshold": 0.08,
+    "in_domain_test_acc_at_0.5": 0.8720305429864253,
+    "in_domain_test_acc_at_val_threshold": 0.8859587104072398,
+    "FF++": {
+      "frames": 23969,
+      "frame_auc": 0.9156953773018937,
+      "frame_eer": 0.16205789077851396,
+      "videos": 750,
+      "video_auc": 0.943788888888889,
+      "video_eer": 0.12583333333333335
+    },
+    "Celeb-DF": {
+      "frames": 16576,
+      "frame_auc": 0.9802619323932171,
+      "frame_eer": 0.06775291226040975,
+      "videos": 518,
+      "video_auc": 0.9945142101784534,
+      "video_eer": 0.027280237937871765
+    },
+    "DFDC": {
+      "frames": 12192,
+      "frame_auc": 0.7075152340379638,
+      "frame_eer": 0.35355101380500437,
+      "videos": 381,
+      "video_auc": 0.750862812769629,
+      "video_eer": 0.30213546160483173
+    },
+    "DeepFakeFace": {
+      "frames": 11848,
+      "frame_auc": 0.9489632767550196,
+      "frame_eer": 0.12418410983569667
+    }
+  }
+}

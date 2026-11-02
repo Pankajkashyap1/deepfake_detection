@@ -1,0 +1,45 @@
+model:
+  clip_model: "openai/clip-vit-base-patch16"
+  llm_model: "mistralai/Mistral-7B-Instruct-v0.3"
+  embed_dim: 768
+  num_patches: 196
+  seq_len: 393
+  num_reasoning_layers: 3
+  use_llm: false
+  use_wavelet: true
+  use_srm: true
+
+fusion:
+  gate_dim: 256
+  dropout: 0.1
+
+prompts:
+  num_prompt_tokens: 4
+
+training:
+  stage1:
+    lr: 5e-5
+    weight_decay: 1e-2
+    epochs: 50
+    batch_size: 16
+    grad_accum_steps: 2
+    max_grad_norm: 1.0
+    early_stopping_patience: 5
+    eval_threshold: 0.5
+
+  stage2:
+    lr: 5e-5
+    weight_decay: 1e-2
+    epochs: 5
+    batch_size: 2
+    grad_accum_steps: 1
+    max_grad_norm: 1.0
+    early_stopping_patience: 3
+
+losses:
+  lambda_cls: 1.0
+  lambda_contrast: 0.1
+  lambda_proto: 0.01
+  lambda_exp: 1.0
+  temperature: 0.07
+  label_smoothing: 0.0

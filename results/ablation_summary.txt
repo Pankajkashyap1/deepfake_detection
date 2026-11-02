@@ -1,0 +1,9 @@
+Ablation Study Results
+
+Full                   AUC 0.9689  EER 0.0891  Acc 0.8944  F1 0.9119
+No SRM                 AUC 0.9571  EER 0.1034  Acc 0.8959  F1 0.9198
+No wavelet             AUC 0.9619  EER 0.1011  Acc 0.9017  F1 0.9216
+No wavelet + no SRM    AUC 0.9583  EER 0.1104  Acc 0.8975  F1 0.9196
+No bridge              AUC 0.9690  EER 0.0864  Acc 0.9133  F1 0.9306
+No contrastive         AUC 0.9588  EER 0.1034  Acc 0.8946  F1 0.9149
+No reasoning           AUC 0.9715  EER 0.0822  Acc 0.9207  F1 0.9377
